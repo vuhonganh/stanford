@@ -72,7 +72,17 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  pass
+  Y = X.dot(W)
+  N = X.shape[0]
+  sub_vec = Y[np.arange(N), y]
+  Y -= sub_vec[:, None]
+  Y += 1
+  Y[np.arange(N), y] = 0
+  Y_threshed = np.maximum(Y, 0)
+  Y = Y_threshed / N
+
+  loss += np.sum(Y) + 0.5 * reg * np.sum(W * W)
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -87,7 +97,20 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+  # this part is quite tricky
+  # we will write dW = X.T * Y_threshed
+  # where Y_threshed[i][j] defines the derivative values (update dW) that data point i
+  # contribute to dW (at column j of dW)
+  # note that the rule is below (after doing derivative we found this rule)
+  # for each data point i, if Y[i][j] > 0 -> update dW by x_i at j-th column and
+  # -x_i at y[i]-th column (small y is the true label, Y is the predict matrix
+  # obtained from above
+  Y_threshed[(Y_threshed > 0)] = 1
+  subtract_term = -np.sum(Y_threshed, axis=1)  # to subtract -x_i
+  Y_threshed[np.arange(N), y] = subtract_term
+  dW = np.dot(X.T, Y_threshed)
+  dW /= N
+  dW += reg * W
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
