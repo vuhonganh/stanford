@@ -219,9 +219,26 @@ class FullyConnectedNet(object):
         # normalization layer. You should pass self.bn_params[0] to the forward pass
         # of the first batch normalization layer, self.bn_params[1] to the forward
         # pass of the second batch normalization layer, etc.
+
+        # You should insert a batch normalization layer before each ReLU nonlinearity.
+        # The outputs from the last layer of the network should not be normalized.
         self.bn_params = []
         if self.use_batchnorm:
+            # init parameters for batch norm
             self.bn_params = [{'mode': 'train'} for i in xrange(self.num_layers - 1)]
+            # at each hidden layer, the bn has beta and gamma params which has equal size to
+            # number of hidden nodes. Put gamma and beta to self.params
+            gamma = 'gamma'
+            beta = 'beta'
+            for i in xrange(self.num_layers - 1):
+                self.bn_params[i]['running_mean'] = np.zeros(hidden_dims[i])
+                self.bn_params[i]['running_var'] = np.zeros(hidden_dims[i])
+                self.bn_params[i]['eps'] = 1e-5
+                self.bn_params[i]['momentum'] = 0.9
+                gammai = gamma + str(i+1)
+                betai = beta + str(i+1)
+                self.params[gammai] = np.ones(hidden_dims[i])
+                self.params[betai] = np.zeros(hidden_dims[i])
 
         # Cast all parameters to the correct datatype
         for k, v in self.params.iteritems():
@@ -264,11 +281,15 @@ class FullyConnectedNet(object):
         param_b = 'b'
         ca = 'ca'  # cache affine
         cr = 'cr'  # cache relu
+        gamma = 'gamma'
+        beta = 'beta'
         layer_prev = X
         caches = {}
         for i in range(self.num_layers):
             wi = self.params[param_w + str(i+1)]
             bi = self.params[param_b + str(i+1)]
+            gammai = self.params[gamma + str(i+1)]
+            betai = self.params[beta + str(i+1)]
             c_affine_i = ca + str(i+1)
             c_relu_i = cr + str(i+1)
             # affine fwd
