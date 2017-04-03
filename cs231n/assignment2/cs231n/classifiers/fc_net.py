@@ -282,6 +282,7 @@ class FullyConnectedNet(object):
         ca = 'ca'  # cache affine
         cr = 'cr'  # cache relu
         cb = 'cb' # cache batch norm
+        cdo = 'cdo' # cache dropout
         gamma = 'gamma'
         beta = 'beta'
         layer_prev = X
@@ -299,13 +300,24 @@ class FullyConnectedNet(object):
                     gammai = self.params[gamma + str(i + 1)]
                     betai = self.params[beta + str(i + 1)]
                     c_bn_i = cb + str(i + 1)
+
                     bn_out, caches[c_bn_i] = batchnorm_forward(affine_out, gammai, betai,
                                                                self.bn_params[i])
                     relu_out, caches[c_relu_i] = relu_forward(bn_out)
-                    layer_prev = relu_out
+                    if self.use_dropout:
+                        c_do_i = cdo + str(i+1)
+                        dropout_out, caches[c_do_i] = dropout_forward(relu_out, self.dropout_param)
+                        layer_prev = dropout_out
+                    else:
+                        layer_prev = relu_out
                 else:
                     relu_out, caches[c_relu_i] = relu_forward(affine_out)
-                    layer_prev = relu_out
+                    if self.use_dropout:
+                        c_do_i = cdo + str(i+1)
+                        dropout_out, caches[c_do_i] = dropout_forward(relu_out, self.dropout_param)
+                        layer_prev = dropout_out
+                    else:
+                        layer_prev = relu_out
             else:  # at last layer, take only the affine
                 layer_prev = affine_out
 
@@ -343,6 +355,10 @@ class FullyConnectedNet(object):
         for i in range(self.num_layers - 1, 0, -1):
             wi = param_w + str(i)
             bi = param_b + str(i)
+            if self.use_dropout:
+                d_dropout = dropout_backward(d_aff_out, caches[cdo + str(i)])
+                d_aff_out = d_dropout
+
             d_relu = relu_backward(d_aff_out, caches[cr + str(i)])
 
             if self.use_batchnorm:
