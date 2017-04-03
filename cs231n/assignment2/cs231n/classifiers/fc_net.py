@@ -281,6 +281,7 @@ class FullyConnectedNet(object):
         param_b = 'b'
         ca = 'ca'  # cache affine
         cr = 'cr'  # cache relu
+        cb = 'cb' # cache batch norm
         gamma = 'gamma'
         beta = 'beta'
         layer_prev = X
@@ -288,15 +289,23 @@ class FullyConnectedNet(object):
         for i in range(self.num_layers):
             wi = self.params[param_w + str(i+1)]
             bi = self.params[param_b + str(i+1)]
-            gammai = self.params[gamma + str(i+1)]
-            betai = self.params[beta + str(i+1)]
             c_affine_i = ca + str(i+1)
             c_relu_i = cr + str(i+1)
             # affine fwd
             affine_out, caches[c_affine_i] = affine_forward(layer_prev, wi, bi)
             if i < self.num_layers - 1:  # relu fwd
-                relu_out, caches[c_relu_i] = relu_forward(affine_out)
-                layer_prev = relu_out
+                ## add batch norm before relu if use it
+                if self.use_batchnorm:
+                    gammai = self.params[gamma + str(i + 1)]
+                    betai = self.params[beta + str(i + 1)]
+                    c_bn_i = cb + str(i + 1)
+                    bn_out, caches[c_bn_i] = batchnorm_forward(affine_out, gammai, betai,
+                                                               self.bn_params[i])
+                    relu_out, caches[c_relu_i] = relu_forward(bn_out)
+                    layer_prev = relu_out
+                else:
+                    relu_out, caches[c_relu_i] = relu_forward(affine_out)
+                    layer_prev = relu_out
             else:  # at last layer, take only the affine
                 layer_prev = affine_out
 
@@ -334,10 +343,18 @@ class FullyConnectedNet(object):
         for i in range(self.num_layers - 1, 0, -1):
             wi = param_w + str(i)
             bi = param_b + str(i)
-
             d_relu = relu_backward(d_aff_out, caches[cr + str(i)])
-            d_aff_out, grads[wi], grads[bi] = \
-                affine_backward(d_relu, caches[ca + str(i)])
+
+            if self.use_batchnorm:
+                gammai = gamma + str(i)
+                betai = beta + str(i)
+                d_bn, grads[gammai], grads[betai] = batchnorm_backward(d_relu, caches[cb + str(i)])
+                d_aff_out, grads[wi], grads[bi] = \
+                    affine_backward(d_bn, caches[ca + str(i)])
+            else:
+                d_aff_out, grads[wi], grads[bi] = \
+                    affine_backward(d_relu, caches[ca + str(i)])
+
         grads[wi] += self.reg * self.params[wi]
         loss += 0.5 * self.reg * np.sum(self.params[wi] ** 2)
 
