@@ -376,6 +376,48 @@ def dropout_backward(dout, cache):
   return dx
 
 
+def convolve(img, filt, pad, stride):
+  C, Hf, Wf = filt.shape
+  C, H, W = img.shape
+
+  Hr = 1 + (H + 2 * pad - Hf) / stride
+  Wr = 1 + (W + 2 * pad - Wf) / stride
+
+  res = np.zeros((Hr, Wr))
+
+  for c in range(C):
+    img_padded = np.pad(img[c], pad, 'constant')  # pad with 0 value by default
+    istart = 0
+    for i in range(Hr):
+      jstart = 0
+      for j in range(Wr):
+        res[i, j] += np.sum(img_padded[istart : istart + Hf, jstart : jstart + Wf] * filt[c])
+        jstart += stride
+      istart += stride
+  return res
+
+
+def convolve_backward(img_n, filt_f, pad, stride, dout_nf):
+  C, Hf, Wf = filt_f.shape
+  C, H, W = img_n.shape
+  Hr = 1 + (H + 2 * pad - Hf) / stride
+  Wr = 1 + (W + 2 * pad - Wf) / stride
+  d_filt = np.zeros(filt_f.shape)
+  d_img_padded = np.zeros((C, H + 2*pad, W + 2*pad))
+  for c in range(C):
+    img_padded = np.pad(img_n[c], pad, 'constant')  # pad with 0 value by default
+    istart = 0
+    for i in range(Hr):
+      jstart = 0
+      for j in range(Wr):
+        d_filt[c] += img_padded[istart : istart + Hf, jstart : jstart + Wf] * dout_nf[i, j]
+        d_img_padded[c, istart : istart + Hf, jstart : jstart + Wf] += filt_f[c] * dout_nf[i, j]
+        jstart += stride
+      istart += stride
+  d_img = d_img_padded[:, pad:-pad, pad:-pad]
+  return d_filt, d_img
+
+
 def conv_forward_naive(x, w, b, conv_param):
   """
   A naive implementation of the forward pass for a convolutional layer.
@@ -404,7 +446,16 @@ def conv_forward_naive(x, w, b, conv_param):
   # TODO: Implement the convolutional forward pass.                           #
   # Hint: you can use the function np.pad for padding.                        #
   #############################################################################
-  pass
+  N, C, H, W = x.shape
+  F, C, HH, WW = w.shape
+  pad = conv_param['pad']
+  stride = conv_param['stride']
+  Hr = 1 + (H + 2 * pad - HH) / stride
+  Wr = 1 + (W + 2 * pad - WW) / stride
+  out = np.zeros((N, F, Hr, Wr))
+  for i in xrange(N):
+    for j in xrange(F):
+      out[i,j] = convolve(x[i], w[j], pad, stride) + b[j]
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -429,7 +480,31 @@ def conv_backward_naive(dout, cache):
   #############################################################################
   # TODO: Implement the convolutional backward pass.                          #
   #############################################################################
-  pass
+  x, w, b, conv_param = cache
+  N, C, H, W = x.shape
+  F, C, HH, WW = w.shape
+  pad = conv_param['pad']
+  stride = conv_param['stride']
+  Hr = 1 + (H + 2 * pad - HH) / stride
+  Wr = 1 + (W + 2 * pad - WW) / stride
+
+  # note that out has shape ((N, F, Hr, Wr))
+  dx = np.zeros(x.shape)
+  db = np.zeros(b.shape)
+  dw = np.zeros(w.shape)
+
+  # pad the whole x
+  x_padded = np.pad(x, ((0,), (0,), (pad,), (pad,)), mode='constant')
+
+  # db is not so difficult
+  for n in xrange(N):
+    for f in range(F):
+      db[f] += np.sum(dout[n, f])
+      d_filt, d_img = convolve_backward(x[n], w[f], pad, stride, dout[n, f])
+      dw[f] += d_filt
+      dx[n] += d_img
+
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
