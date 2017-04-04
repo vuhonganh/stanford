@@ -371,8 +371,8 @@ class FullyConnectedNet(object):
                 d_aff_out, grads[wi], grads[bi] = \
                     affine_backward(d_relu, caches[ca + str(i)])
 
-        grads[wi] += self.reg * self.params[wi]
-        loss += 0.5 * self.reg * np.sum(self.params[wi] ** 2)
+            grads[wi] += self.reg * self.params[wi]
+            loss += 0.5 * self.reg * np.sum(self.params[wi] ** 2)
 
         ############################################################################
         #                             END OF YOUR CODE                             #

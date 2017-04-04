@@ -530,7 +530,24 @@ def max_pool_forward_naive(x, pool_param):
   #############################################################################
   # TODO: Implement the max pooling forward pass                              #
   #############################################################################
-  pass
+  N, C, H, W = x.shape
+  pH = pool_param['pool_height']
+  pW = pool_param['pool_width']
+  stride = pool_param['stride']
+
+  new_H = H / pH
+  new_W = W / pW
+  out = np.zeros((N, C, new_W, new_H))
+
+  for n in range(N):
+    for c in range(C):
+      istart = 0
+      for i in range(new_H):
+        jstart = 0
+        for j in range(new_W):
+          out[n, c, i, j] = np.max(x[n, c, istart : istart + pH, jstart : jstart + pW])
+          jstart += stride
+        istart += stride
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -553,7 +570,32 @@ def max_pool_backward_naive(dout, cache):
   #############################################################################
   # TODO: Implement the max pooling backward pass                             #
   #############################################################################
-  pass
+  x, pool_param = cache
+  N, C, H, W = x.shape
+  pH = pool_param['pool_height']
+  pW = pool_param['pool_width']
+  stride = pool_param['stride']
+
+  new_H = H / pH
+  new_W = W / pW
+
+  dx = np.zeros(x.shape)
+
+  for n in range(N):
+    for c in range(C):
+      istart = 0
+      for i in range(new_H):
+        jstart = 0
+        for j in range(new_W):
+          # out[n, c, i, j] = np.max(x[n, c, istart : istart + pH, jstart : jstart + pW])
+          mask = x[n, c, istart : istart + pH, jstart : jstart + pW]
+          mask[mask < np.max(mask)] = 0
+          if np.sum(mask) != 0:  # average backward through equal max: easier to implement
+            mask /= np.sum(mask)
+          dx[n, c, istart : istart + pH, jstart : jstart + pW] += dout[n, c, i, j] * mask
+          jstart += stride
+        istart += stride
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -575,8 +617,8 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
       old information is discarded completely at every time step, while
       momentum=1 means that new information is never incorporated. The
       default of momentum=0.9 should work well in most situations.
-    - running_mean: Array of shape (D,) giving running mean of features
-    - running_var Array of shape (D,) giving running variance of features
+    - running_mean: Array of shape (C,) giving running mean of features
+    - running_var Array of shape (C,) giving running variance of features
     
   Returns a tuple of:
   - out: Output data, of shape (N, C, H, W)
@@ -591,7 +633,12 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
   # version of batch normalization defined above. Your implementation should  #
   # be very short; ours is less than five lines.                              #
   #############################################################################
-  pass
+  # reshape x (N, C, H, W) -> (N, C, D) where D = H * W
+  N, C, H, W = x.shape
+  metaN = N * H * W
+  x_reshaped = x.transpose(0, 2, 3, 1).reshape(metaN, C)
+  out_meta, cache = batchnorm_forward(x_reshaped, gamma, beta, bn_param)
+  out = out_meta.reshape(N, H, W, C).transpose(0, 3, 1, 2)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -621,7 +668,11 @@ def spatial_batchnorm_backward(dout, cache):
   # version of batch normalization defined above. Your implementation should  #
   # be very short; ours is less than five lines.                              #
   #############################################################################
-  pass
+  N, C, H, W = dout.shape
+  metaN = N * H * W
+  dout_reshaped = dout.transpose(0, 2, 3, 1).reshape(metaN, C)
+  dx_meta, dgamma, dbeta = batchnorm_backward(dout_reshaped, cache)
+  dx = dx_meta.reshape(N, H, W, C).transpose(0, 3, 1, 2)
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
