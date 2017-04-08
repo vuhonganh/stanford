@@ -1,3 +1,5 @@
+from _hotshot import WHAT_ADD_INFO
+
 import numpy as np
 
 
@@ -45,7 +47,7 @@ def rnn_step_backward(dnext_h, cache):
   Backward pass for a single timestep of a vanilla RNN.
   
   Inputs:
-  - dnext_h: Gradient of loss with respect to next hidden state
+  - dnext_h: Gradient of loss with respect to next hidden state (N, H)
   - cache: Cache object from the forward pass
   
   Returns a tuple of:
@@ -104,7 +106,22 @@ def rnn_forward(x, h0, Wx, Wh, b):
   # input data. You should use the rnn_step_forward function that you defined  #
   # above.                                                                     #
   ##############################################################################
-  pass
+  N, T, D = x.shape
+  cache = {}
+  cache['input_dim'] = D
+
+  _, H = h0.shape
+
+  x_reshaped = x.transpose(1, 0, 2)  # reshape to T, N, D
+
+  h_reshaped = np.zeros((T, N, H))
+
+  for t in range(T):
+    if t == 0:
+      h_reshaped[t], cache[t] = rnn_step_forward(x_reshaped[t], h0, Wx, Wh, b)
+    else:
+      h_reshaped[t], cache[t] = rnn_step_forward(x_reshaped[t], h_reshaped[t-1], Wx, Wh, b)
+  h = h_reshaped.transpose(1, 0, 2)  # reshape to N, T, H
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
@@ -131,7 +148,28 @@ def rnn_backward(dh, cache):
   # sequence of data. You should use the rnn_step_backward function that you   #
   # defined above.                                                             #
   ##############################################################################
-  pass
+
+  D = cache['input_dim']
+  N, T, H = dh.shape
+  dh_reshaped = dh.transpose(1, 0, 2)  # T, N, H
+
+  dx_reshaped = np.zeros((T, N, D))
+  dh0 = np.zeros((N, H))
+  dprev_h = np.zeros((N, H))
+  dWx = np.zeros((D, H))
+  dWh = np.zeros((H, H))
+  db = np.zeros(H)
+
+  for t in range(T-1, -1, -1):
+    # aside from upstream, the gradient flows back are also accumulated from next layer
+    dx_reshaped[t], dprev_h, dWx_accum, dWh_accum, db_accum = rnn_step_backward(dprev_h + dh_reshaped[t], cache[t])
+    dWx += dWx_accum
+    dWh += dWh_accum
+    db += db_accum
+    if t == 0:
+      dh0 = dprev_h
+
+  dx = dx_reshaped.transpose(1, 0 , 2)
   ##############################################################################
   #                               END OF YOUR CODE                             #
   ##############################################################################
