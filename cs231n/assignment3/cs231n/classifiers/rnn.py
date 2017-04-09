@@ -141,7 +141,7 @@ class CaptioningRNN(object):
       # out_hid = h in RNN model
       out_hid, cache_hid = rnn_forward(out_embed, out_proj, Wx, Wh, b)
     elif self.cell_type == 'lstm':
-      print 'not deal with ltsm yet'
+      out_hid, cache_hid = lstm_forward(out_embed, out_proj, Wx, Wh, b)
     # (4) Use a (temporal) affine transformation to compute scores over the    #
     #     vocabulary at every timestep using the hidden states, giving an      #
     #     array of shape (N, T, V).
@@ -164,7 +164,12 @@ class CaptioningRNN(object):
     ############################################################################
 
     dout_hid, grads['W_vocab'], grads['b_vocab'] = temporal_affine_backward(dloss, cache_vocab)
-    dout_embed, dout_proj, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dout_hid, cache_hid)
+
+    if self.cell_type == 'rnn':
+      dout_embed, dout_proj, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(dout_hid, cache_hid)
+    elif self.cell_type == 'lstm':
+      dout_embed, dout_proj, grads['Wx'], grads['Wh'], grads['b'] = lstm_backward(dout_hid, cache_hid)
+
     grads['W_embed'] = word_embedding_backward(dout_embed, cache_embed)
     _, grads['W_proj'], grads['b_proj'] = affine_backward(dout_proj, cache_proj)
 
@@ -232,13 +237,22 @@ class CaptioningRNN(object):
     ###########################################################################
     prev_h, _ = affine_forward(features, W_proj, b_proj)  # prev_h = h0 here
     word_prev_id = np.array([self._start] * N)
+    prev_c = np.zeros(prev_h.shape)
+
     for t in range(max_length):
       x_t = W_embed[word_prev_id]
-      out_hid, _ = rnn_step_forward(x_t, prev_h, Wx, Wh, b)
+      if self.cell_type == 'rnn':
+        out_hid, _ = rnn_step_forward(x_t, prev_h, Wx, Wh, b)
+      elif self.cell_type == 'lstm':
+        out_hid, out_c, _ = lstm_step_forward(x_t, prev_h, prev_c, Wx, Wh, b)
+
       y_t, _ = affine_forward(out_hid, W_vocab, b_vocab)  # y_t (N, vocab_size)
       word_prev_id = np.argmax(y_t, axis=1)
       captions[:, t] = word_prev_id
+
+      # update prev_h and prev_c
       prev_h = out_hid
+      prev_c = out_c
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
