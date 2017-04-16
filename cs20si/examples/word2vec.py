@@ -1,5 +1,5 @@
 import tensorflow as tf
-from process_data import *
+from process_data import process_data
 
 BATCH_SIZE = 128
 VOCAB_SIZE = 50000
