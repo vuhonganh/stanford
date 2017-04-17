@@ -7,7 +7,7 @@ BATCH_SIZE = 128
 VOCAB_SIZE = 50000
 EMBED_SIZE = 128
 LEARNING_RATE = 1.0
-NUM_TRAIN_STEPS = 50000
+NUM_TRAIN_STEPS = 10000
 SKIP_STEP = 2000  # how many steps to skip before reporting the loss
 NUM_SAMPLED = 64
 SKIP_WINDOW = 1
@@ -77,15 +77,17 @@ def train_model(model, batch_gen, num_train_steps):
         # switch to average_loss because using saved session here
         average_loss = 0.0
 
-        writer = tf.summary.FileWriter('./my_graph/word2vec_visualized/', sess.graph)
+        # writer = tf.summary.FileWriter('./my_graph/word2vec_visualized/', sess.graph)
+        writer = tf.summary.FileWriter('./processed/', sess.graph)
 
         initial_step = model.global_step.eval()
 
         for index in range(initial_step, initial_step + num_train_steps):
             centers, targets = next(batch_gen)
             # TO DO: create feed_dict, run optimizer, fetch loss_batch
-            _, loss_batch = sess.run(fetches=[model.optimizer, model.loss],
-                                     feed_dict={model.center_words : centers, model.target_words : targets})
+            _, loss_batch, summary = sess.run(fetches=[model.optimizer, model.loss, model.summary_op],
+                                              feed_dict={model.center_words : centers, model.target_words : targets})
+            writer.add_summary(summary, global_step=index)
             average_loss += loss_batch
             if (index + 1) % SKIP_STEP == 0:
                 print('Average loss at step {}: {:5.1f}'.format(index + 1, average_loss / SKIP_STEP))
