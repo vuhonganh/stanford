@@ -47,7 +47,9 @@ def build_vocab(words, vocab_size):
     count = [('UNK', -1)]
     count.extend(Counter(words).most_common(vocab_size - 1))
     index = 0
-    with open('vocab_1000.tsv', "w") as f:
+    if not os.path.exists('./processed/'):
+        os.makedirs('./processed/')
+    with open('./processed/vocab_1000.tsv', "w") as f:
         # f.write("Name\n")
         for word, _ in count:
             dictionary[word] = index
