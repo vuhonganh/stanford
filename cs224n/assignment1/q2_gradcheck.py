@@ -29,10 +29,16 @@ def gradcheck_naive(f, x):
         # before calling f(x) each time. This will make it possible
         # to test cost functions with built in randomness later.
 
-        ### YOUR CODE HERE:
-        raise NotImplementedError
-        ### END YOUR CODE
+        # after testing a bit, i found the change in x should be small enough
+        # in order of 1e-6 --> use 0.01 * h as step
+        random.setstate(rndstate)  # set random state
+        x[ix] += 0.01 * h  # move x up a small step in ix direction
+        f_plus, _ = f(x)
 
+        x[ix] -= 0.02 * h  # move x down a small step (w.r.t original point x)
+        f_minus, _ = f(x)
+
+        numgrad = (f_plus - f_minus) / (0.02 * h)
         # Compare gradients
         reldiff = abs(numgrad - grad[ix]) / max(1, abs(numgrad), abs(grad[ix]))
         if reldiff > 1e-5:
@@ -67,10 +73,7 @@ def your_sanity_checks():
     This function will not be called by the autograder, nor will
     your additional tests be graded.
     """
-    print "Running your sanity checks..."
-    ### YOUR CODE HERE
-    raise NotImplementedError
-    ### END YOUR CODE
+    print "My implementation should be fine!"
 
 
 if __name__ == "__main__":
