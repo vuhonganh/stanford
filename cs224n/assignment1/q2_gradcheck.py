@@ -29,16 +29,18 @@ def gradcheck_naive(f, x):
         # before calling f(x) each time. This will make it possible
         # to test cost functions with built in randomness later.
 
-        # after testing a bit, i found the change in x should be small enough
-        # in order of 1e-6 --> use 0.01 * h as step
         random.setstate(rndstate)  # set random state
-        x[ix] += 0.01 * h  # move x up a small step in ix direction
+        x[ix] += h  # move x up a small step in ix direction
         f_plus, _ = f(x)
-
-        x[ix] -= 0.02 * h  # move x down a small step (w.r.t original point x)
+        random.setstate(rndstate)  # set random state
+        x[ix] -= 2 * h  # move x down a small step (w.r.t original point x)
         f_minus, _ = f(x)
 
-        numgrad = (f_plus - f_minus) / (0.02 * h)
+        # VERY IMPORTANT: reset x to original value
+        x[ix] += h
+
+        # compute numgrad
+        numgrad = (f_plus - f_minus) / (2 * h)
         # Compare gradients
         reldiff = abs(numgrad - grad[ix]) / max(1, abs(numgrad), abs(grad[ix]))
         if reldiff > 1e-5:

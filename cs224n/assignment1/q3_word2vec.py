@@ -13,11 +13,8 @@ def normalizeRows(x):
     Implement a function that normalizes each row of a matrix to have
     unit length.
     """
-
-    ### YOUR CODE HERE
-    raise NotImplementedError
-    ### END YOUR CODE
-
+    x_norm = np.sqrt(np.sum(x ** 2, axis=1, keepdims=True))
+    x = x / x_norm
     return x
 
 
@@ -56,11 +53,21 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     free to reference the code you previously wrote for this
     assignment!
     """
+    # predicted = v_c in q2a
+    # outputVectors = U.T in q2a
+    y_hat = softmax(np.dot(outputVectors, predicted))
+    # print "yhat"
+    # print np.shape(y_hat)
+    # print y_hat
+    cost = -np.log(y_hat[target])
+    y_hat[target] -= 1  # get y_hat - y as in q2a
 
-    ### YOUR CODE HERE
-    raise NotImplementedError
-    ### END YOUR CODE
+    # gradPred = dL/dv_c
+    gradPred = np.dot(outputVectors.T, y_hat)
 
+    # grad = dL/dU
+    grad = np.dot(y_hat[:, None], predicted[None, :])
+    # print cost
     return cost, gradPred, grad
 
 
@@ -75,7 +82,7 @@ def getNegativeSamples(target, dataset, K):
         indices[k] = newidx
     return indices
 
-
+global_counter = 0
 def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
                                K=10):
     """ Negative sampling cost function for word2vec models
@@ -95,9 +102,43 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
     indices = [target]
     indices.extend(getNegativeSamples(target, dataset, K))
 
-    ### YOUR CODE HERE
-    raise NotImplementedError
-    ### END YOUR CODE
+    # predicted = v_c in q2a
+    # outputVectors = U.T in q2a
+    # get output vectors in neg-sampling
+    us = outputVectors[indices]  # shape (K+1, dim)
+    us[1:] = -us[1:]  # -u_k is more convenient than u_k
+    # matrix product of us with v_c
+    us_v = np.dot(us, predicted)  # normally shape is (K+1,)
+    sigm_us_v = sigmoid(us_v)
+    cost = -np.sum(np.log(sigm_us_v))
+
+
+    factors = sigm_us_v - 1.0
+    # gradPred = dJ/dv_c
+    gradPred = us * factors[:, None]  # need to make factors' shape turn into (K+1, 1)
+    gradPred = np.sum(gradPred, axis=0)
+
+    # grad w.r.t to vectors u
+    grad = np.zeros_like(outputVectors)
+
+    vc_mat = np.tile(predicted, (K+1, 1))  # make a matrix where any row is v_c
+    factors[1:] = -factors[1:]  # factor of the term dJ/du_k
+    dus = vc_mat * factors[:, None]  # element wise factor on each row
+    # NOTE: the below code are wrong because indices contain duplicates and python overwrites +=
+    # so only the last assign is done, but we want the accumulative result
+    # grad[indices, :] += dus[:]  # only this part is change
+
+    # Hence we need to use np.add.at
+    np.add.at(grad, indices, dus)
+
+    # global global_counter
+    # if global_counter < 1:
+    #     print dus
+    #     print grad[indices]
+    #     global_counter += 1
+
+    # for k in range(K+1):
+    #     grad[indices[k]] += dus[k,:]
 
     return cost, gradPred, grad
 
@@ -130,9 +171,14 @@ def skipgram(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     gradIn = np.zeros(inputVectors.shape)
     gradOut = np.zeros(outputVectors.shape)
 
-    ### YOUR CODE HERE
-    raise NotImplementedError
-    ### END YOUR CODE
+    idx_predicted = tokens[currentWord]
+    predicted = inputVectors[idx_predicted]
+    for w_c in contextWords:
+        target = tokens[w_c]  # index of the context word
+        cur_cost, cur_gradPred, cur_gradOut = word2vecCostAndGradient(predicted, target, outputVectors, dataset)
+        cost += cur_cost
+        gradIn[idx_predicted] += cur_gradPred
+        gradOut += cur_gradOut
 
     return cost, gradIn, gradOut
 
@@ -154,10 +200,22 @@ def cbow(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     gradIn = np.zeros(inputVectors.shape)
     gradOut = np.zeros(outputVectors.shape)
 
-    ### YOUR CODE HERE
-    raise NotImplementedError
-    ### END YOUR CODE
+    dim = inputVectors.shape[1]
+    v_hat = np.zeros(dim)
+    idx_context = []
+    for w_c in contextWords:
+        idx = tokens[w_c]
+        v_hat += inputVectors[idx]
+        idx_context.append(idx)
 
+    target = tokens[currentWord]
+    cost, cur_gradPred, cur_gradOut = word2vecCostAndGradient(v_hat, target, outputVectors, dataset)
+    # SAME ERROR as before: gradIn[idx_context] += cur_gradPred
+    # the code above is wrong when idx_content has duplicates
+    # because += will overwrites and then only assign the last occurence
+    # use numpy.add.at will take into account duplicates
+    np.add.at(gradIn, idx_context, cur_gradPred)
+    gradOut += cur_gradOut
     return cost, gradIn, gradOut
 
 
@@ -208,6 +266,7 @@ def test_word2vec():
     random.seed(31415)
     np.random.seed(9265)
     dummy_vectors = normalizeRows(np.random.randn(10,3))
+    # dummy_vectors = np.random.randn(10,3)
     dummy_tokens = dict([("a",0), ("b",1), ("c",2),("d",3),("e",4)])
     print "==== Gradient check for skip-gram ===="
     gradcheck_naive(lambda vec: word2vec_sgd_wrapper(
