@@ -56,9 +56,6 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     # predicted = v_c in q2a
     # outputVectors = U.T in q2a
     y_hat = softmax(np.dot(outputVectors, predicted))
-    # print "yhat"
-    # print np.shape(y_hat)
-    # print y_hat
     cost = -np.log(y_hat[target])
     y_hat[target] -= 1  # get y_hat - y as in q2a
 
@@ -67,7 +64,6 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
 
     # grad = dL/dU
     grad = np.dot(y_hat[:, None], predicted[None, :])
-    # print cost
     return cost, gradPred, grad
 
 
@@ -130,15 +126,6 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
 
     # Hence we need to use np.add.at
     np.add.at(grad, indices, dus)
-
-    # global global_counter
-    # if global_counter < 1:
-    #     print dus
-    #     print grad[indices]
-    #     global_counter += 1
-
-    # for k in range(K+1):
-    #     grad[indices[k]] += dus[k,:]
 
     return cost, gradPred, grad
 
