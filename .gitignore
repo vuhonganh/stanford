@@ -6,3 +6,4 @@
 *.zip
 checkpoints*
 processed*
+*.npy
