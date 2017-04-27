@@ -1,3 +1,4 @@
+import copy
 class PartialParse(object):
     def __init__(self, sentence):
         """Initializes this partial parse.
@@ -21,7 +22,13 @@ class PartialParse(object):
         self.sentence = sentence
 
         ### YOUR CODE HERE
+        self.stack = ["ROOT"]
+        self.buffer = list(sentence)  # hard copy of sentence (which is a list)
+        self.dependencies = []
         ### END YOUR CODE
+
+    def terminated(self):
+        return len(self.buffer) == 0 and len(self.stack) == 1
 
     def parse_step(self, transition):
         """Performs a single parse step by applying the given transition to this partial parse
@@ -31,6 +38,27 @@ class PartialParse(object):
                         and right-arc transitions.
         """
         ### YOUR CODE HERE
+        if transition == "S":
+            if len(self.buffer) > 0:
+                self.stack.append(self.buffer.pop(0))
+            else:
+                print "ERROR: buffer empty, can not SHIFT"
+        elif transition == "LA":
+            if len(self.stack) > 1:
+                second_top = self.stack.pop(-2)
+                arc = (self.stack[-1], second_top)  # left-arc: top is head, second-top is dependent
+                self.dependencies.append(arc)
+            else:
+                print "ERROR: stack length < 2, can not Left-Arc"
+        elif transition == "RA":
+            if len(self.stack) >= 1:
+                top = self.stack.pop(-1)
+                arc = (self.stack[-1], top)
+                self.dependencies.append(arc)
+            else:
+                print "ERROR: stack length < 2, can not Shift-Arc"
+        else:
+            print "ERROR: unrecognized transition"
         ### END YOUR CODE
 
     def parse(self, transitions):
@@ -45,6 +73,7 @@ class PartialParse(object):
         for transition in transitions:
             self.parse_step(transition)
         return self.dependencies
+
 
 
 def minibatch_parse(sentences, model, batch_size):
@@ -65,6 +94,20 @@ def minibatch_parse(sentences, model, batch_size):
     """
 
     ### YOUR CODE HERE
+    partial_parses = [PartialParse(s) for s in sentences]
+    # remember shallow copy let us modify the value of elements (by reference) while keeping
+    # the structure of partial_parses unchanged
+    unfinished_parses = copy.copy(partial_parses)
+    while len(unfinished_parses) > 0:
+        batch_transition = model.predict(unfinished_parses[0:batch_size])
+        nb_trans = len(batch_transition)  # the last part can have nb of parses < batch_size
+        for i in range(nb_trans):
+            unfinished_parses[i].parse_step(batch_transition[i])
+            # pay attention that this list comprehension and references are subtle
+            # better way is to pop from the back (eg. for idx in reversed(range(nb_trans))
+        unfinished_parses[0:nb_trans] = [p for p in unfinished_parses[0:nb_trans] if not p.terminated()]
+
+    dependencies = [p.dependencies for p in partial_parses]
     ### END YOUR CODE
 
     return dependencies
@@ -120,9 +163,9 @@ class DummyModel:
     the sentence is "right", "left" if otherwise.
     """
     def predict(self, partial_parses):
-        return [("RA" if pp.stack[1] is "right" else "LA") if len(pp.buffer) == 0 else "S"
+        res = [("RA" if pp.stack[1] is "right" else "LA") if len(pp.buffer) == 0 else "S"
                 for pp in partial_parses]
-
+        return res
 
 def test_dependencies(name, deps, ex_deps):
     """Tests the provided dependencies match the expected dependencies"""
