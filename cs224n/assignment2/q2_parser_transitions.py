@@ -51,7 +51,7 @@ class PartialParse(object):
             else:
                 print "ERROR: stack length < 2, can not Left-Arc"
         elif transition == "RA":
-            if len(self.stack) >= 1:
+            if len(self.stack) > 1:
                 top = self.stack.pop(-1)
                 arc = (self.stack[-1], top)
                 self.dependencies.append(arc)

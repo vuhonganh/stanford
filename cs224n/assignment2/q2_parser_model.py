@@ -84,8 +84,10 @@ class ParserModel(Model):
         """
         ### YOUR CODE HERE
         feed_dict = {}
+
         feed_dict[self.input_placeholder] = inputs_batch
         feed_dict[self.dropout_placeholder] = dropout
+
         if labels_batch is not None:
             feed_dict[self.labels_placeholder] = labels_batch
         ### END YOUR CODE
@@ -109,9 +111,13 @@ class ParserModel(Model):
             embeddings: tf.Tensor of shape (None, n_features*embed_size)
         """
         ### YOUR CODE HERE
-        embeddings = tf.nn.embedding_lookup(self.pretrained_embeddings, self.input_placeholder)
+
+        whole_embeddings = tf.Variable(self.pretrained_embeddings)
+        embeddings = tf.nn.embedding_lookup(whole_embeddings, self.input_placeholder)
+
         dims = tf.shape(embeddings)
         embeddings = tf.reshape(embeddings, [dims[0], -1])
+        # print(embeddings.get_shape())
         ### END YOUR CODE
         return embeddings
 
@@ -143,10 +149,13 @@ class ParserModel(Model):
         x = self.add_embedding()
         ### YOUR CODE HERE
         xavier_initializer = xavier_weight_init()
+
         W = tf.Variable(xavier_initializer((self.config.n_features * self.config.embed_size, self.config.hidden_size)))
-        b1 = tf.Variable(tf.zeros((self.config.hidden_size, )))
+        b1 = tf.Variable(tf.zeros((self.config.hidden_size)))
+
         U = tf.Variable(xavier_initializer((self.config.hidden_size, self.config.n_classes)))
         b2 = tf.Variable(tf.zeros((self.config.n_classes)))
+
         h = tf.nn.relu(tf.matmul(x, W) + b1)
         h_drop = tf.nn.dropout(h, self.dropout_placeholder)
         pred = tf.matmul(h_drop, U) + b2
@@ -278,5 +287,5 @@ def main(debug=True):
 
 if __name__ == '__main__':
     main(debug=False)
-
+    # main()
 
