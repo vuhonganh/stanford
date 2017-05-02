@@ -37,7 +37,7 @@ class Config:
     n_word_features = 2 # Number of features for every word in the input.
     window_size = 1 # The size of the window to use.
     ### YOUR CODE HERE
-    n_window_features = 0 # The total number of features used for each window.
+    n_window_features = (2 * window_size + 1) * n_word_features # The total number of features used for each window.
     ### END YOUR CODE
     n_classes = 5
     dropout = 0.5
@@ -93,11 +93,20 @@ def make_windowed_data(data, start, end, window_size = 1):
          ...
          ]
     """
-
+    nb_feat_in_w = len(start)  # nb of features in each word
     windowed_data = []
+    d = (2 * window_size + 1) * nb_feat_in_w  # nb of feats each time
     for sentence, labels in data:
     ### YOUR CODE HERE (5-20 lines)
-
+        # code up the list form (note that they suppose to have 1D list while input is list of list
+        l = [el for el in start] * window_size
+        l += [el for ell in sentence for el in ell]
+        l += [el for el in end] * window_size
+        k = 0  # start index of features
+        for i in range(len(labels)):
+            cur_point = (l[k : k + d], labels[i])
+            windowed_data.append(cur_point)
+            k += nb_feat_in_w  # jump to idx of next word
     ### END YOUR CODE
     return windowed_data
 
