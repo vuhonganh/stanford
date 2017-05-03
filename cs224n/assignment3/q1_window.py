@@ -226,8 +226,6 @@ class WindowModel(NERModel):
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
         ### YOUR CODE HERE (~10-20 lines)
-        ### YOUR CODE HERE
-
         xavier_initializer = tf.contrib.layers.xavier_initializer()
 
         # W: D * H
@@ -237,9 +235,9 @@ class WindowModel(NERModel):
         U = tf.Variable(xavier_initializer((self.config.hidden_size, self.config.n_classes)),
                         name="U")
         # b1: H
-        b1 = tf.Variable(tf.zeros((self.config.hidden_size)), name="b1")
+        b1 = tf.Variable(tf.zeros(self.config.hidden_size), name="b1")
         # b2: C
-        b2 = tf.Variable(tf.zeros((self.config.n_classes)), name="b2")
+        b2 = tf.Variable(tf.zeros(self.config.n_classes), name="b2")
 
         h = tf.nn.relu(tf.matmul(x, W) + b1)
         h_drop = tf.nn.dropout(h, dropout_rate)

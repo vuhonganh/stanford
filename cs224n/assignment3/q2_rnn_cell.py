@@ -48,7 +48,7 @@ class RNNCell(tf.contrib.rnn.RNNCell):
             - Compute @new_state (h_t) defined above
         Tips:
             - Remember to initialize your matrices using the xavier
-              initialization as before.
+              initialization as before.  # This tip is wrong bcs we get_variable here
         Args:
             inputs: is the input vector of size [None, self.input_size]
             state: is the previous state vector of size [None, self.state_size]
@@ -63,9 +63,14 @@ class RNNCell(tf.contrib.rnn.RNNCell):
 
         with tf.variable_scope(scope):
             ### YOUR CODE HERE (~6-10 lines)
-            W_x = tf.get_variable("W_x")
-            W_h = tf.get_variable("W_h")
-            b = tf.get_variable("b")
+            W_x = tf.get_variable("W_x",
+                                  initializer=tf.contrib.layers.xavier_initializer(),
+                                  shape=(self.input_size, self._state_size))
+            W_h = tf.get_variable("W_h",
+                                  initializer=tf.contrib.layers.xavier_initializer(),
+                                  shape=(self._state_size, self._state_size))
+            b = tf.get_variable("b", initializer=tf.zeros_initializer(),
+                                shape=(self._state_size,))
             new_state = tf.sigmoid(tf.matmul(inputs, W_x) + tf.matmul(state, W_h) + b)
             ### END YOUR CODE ###
         # For an RNN , the output and state are the same (N.B. this
