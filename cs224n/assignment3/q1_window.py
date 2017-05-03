@@ -189,7 +189,7 @@ class WindowModel(NERModel):
             embeddings: tf.Tensor of shape (None, n_window_features*embed_size)
         """
         ### YOUR CODE HERE (!3-5 lines)
-        retrain = True
+        retrain = True  # tested with retrain = False return bad result --> retrain word vector
         whole_embedding = tf.Variable(self.pretrained_embeddings, trainable=retrain, name="wholeEmbedding")
         if retrain:
             print "NOTE: currently retrain embedding matrix"
@@ -226,8 +226,6 @@ class WindowModel(NERModel):
         x = self.add_embedding()
         dropout_rate = self.dropout_placeholder
         ### YOUR CODE HERE (~10-20 lines)
-        n_word_features = 2  # Number of features for every word in the input.
-        window_size = 1  # The size of the window to use.
         ### YOUR CODE HERE
 
         xavier_initializer = tf.contrib.layers.xavier_initializer()
@@ -244,7 +242,7 @@ class WindowModel(NERModel):
         b2 = tf.Variable(tf.zeros((self.config.n_classes)), name="b2")
 
         h = tf.nn.relu(tf.matmul(x, W) + b1)
-        h_drop = tf.nn.dropout(h, self.dropout_placeholder)
+        h_drop = tf.nn.dropout(h, dropout_rate)
         pred = tf.matmul(h_drop, U) + b2
         ### END YOUR CODE
         return pred
@@ -327,6 +325,9 @@ class WindowModel(NERModel):
 
     def __init__(self, helper, config, pretrained_embeddings, report=None):
         super(WindowModel, self).__init__(helper, config, report)
+        # train from random below is better than untrain but a bit worse than
+        # train from pretrained (so maybe need more time to run - we only did 10 epochs)
+        # self.pretrained_embeddings = tf.random_normal(pretrained_embeddings.shape)
         self.pretrained_embeddings = pretrained_embeddings
 
         # Defining placeholders.
