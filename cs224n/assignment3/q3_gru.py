@@ -39,7 +39,8 @@ class Config:
     max_length = 20 # Length of sequence used.
     batch_size = 100
     n_epochs = 40
-    lr = 0.2
+    # lr = 0.2
+    lr = 0.3
     max_grad_norm = 5.
 
 class SequencePredictor(Model):
@@ -81,12 +82,17 @@ class SequencePredictor(Model):
         elif self.config.cell == "gru":
             cell = GRUCell(1, 1)
         elif self.config.cell == "lstm":
-            cell = tf.nn.rnn_cell.LSTMCell(1)
+            # cell = tf.nn.rnn_cell.LSTMCell(1)  # old version of tf
+            cell = tf.contrib.rnn.LSTMCell(1)
         else:
             raise ValueError("Unsupported cell type.")
 
         x = self.inputs_placeholder
         ### YOUR CODE HERE (~2-3 lines)
+        # init_val = tf.zeros((self.config.batch_size, 1))
+        _, final_state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)  # note that arg time_major is False by default (see doc for detail)
+        # _, final_state = tf.nn.dynamic_rnn(cell, x, initial_state=init_val)  # note that arg time_major is False by default (see doc for detail)
+        preds = tf.sigmoid(final_state)
         ### END YOUR CODE
 
         return preds #state # preds
@@ -108,7 +114,7 @@ class SequencePredictor(Model):
         y = self.labels_placeholder
 
         ### YOUR CODE HERE (~1-2 lines)
-
+        loss = tf.nn.l2_loss(preds - y, name="lossL2")
         ### END YOUR CODE
 
         return loss
@@ -140,6 +146,18 @@ class SequencePredictor(Model):
 
         ### YOUR CODE HERE (~6-10 lines)
 
+        trainables = tf.trainable_variables()
+
+        grads = tf.gradients(loss, trainables)
+
+        if self.config.clip_gradients:
+            grads, _ = tf.clip_by_global_norm(grads, clip_norm=self.config.max_grad_norm)
+
+        self.grad_norm = tf.global_norm(grads)
+
+        grad_var_pairs = zip(grads, trainables)
+        train_op = optimizer.apply_gradients(grad_var_pairs)
+
         # - Remember to clip gradients only if self.config.clip_gradients
         # is True.
         # - Remember to set self.grad_norm
@@ -160,12 +178,17 @@ class SequencePredictor(Model):
     def run_epoch(self, sess, train):
         prog = Progbar(target=1 + int(len(train) / self.config.batch_size))
         losses, grad_norms = [], []
+        max_norm = 0.0
         for i, batch in enumerate(minibatches(train, self.config.batch_size)):
             loss, grad_norm = self.train_on_batch(sess, *batch)
             losses.append(loss)
             grad_norms.append(grad_norm)
+            if grad_norm > max_norm:
+                max_norm = grad_norm
             prog.update(i + 1, [("train loss", loss)])
-
+        print("")
+        print(max_norm)
+        print("")
         return losses, grad_norms
 
     def fit(self, sess, train):

@@ -48,7 +48,7 @@ class RNNCell(tf.contrib.rnn.RNNCell):
             - Compute @new_state (h_t) defined above
         Tips:
             - Remember to initialize your matrices using the xavier
-              initialization as before.  # This tip is wrong bcs we get_variable here
+              initialization as before.
         Args:
             inputs: is the input vector of size [None, self.input_size]
             state: is the previous state vector of size [None, self.state_size]
