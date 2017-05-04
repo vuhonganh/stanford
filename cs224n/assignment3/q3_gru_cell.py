@@ -67,26 +67,25 @@ class GRUCell(tf.contrib.rnn.RNNCell):
             ### YOUR CODE HERE (~20-30 lines)
 
             xavier_init = tf.contrib.layers.xavier_initializer()
-            # z_t = sigmoid(x_t U_z + h_{t-1} W_z + b_z)
-            # r_t = sigmoid(x_t U_r + h_{t-1} W_r + b_r)
-            # o_t = tanh(x_t U_o + r_t * h_{t-1} W_o + b_o)
-            # h_t = z_t * h_{t-1} + (1 - z_t) * o_t
+            zero_init = tf.zeros_initializer()
 
             D = self.input_size
             H = self._state_size
+
+            # note that the order of initialization below can affect the result
             Uz = tf.get_variable("U_z", shape=(D, H), initializer=xavier_init)
             Ur = tf.get_variable("U_r", shape=(D, H), initializer=xavier_init)
             Uo = tf.get_variable("U_o", shape=(D, H), initializer=xavier_init)
             Wz = tf.get_variable("W_z", shape=(H, H), initializer=xavier_init)
             Wr = tf.get_variable("W_r", shape=(H, H), initializer=xavier_init)
             Wo = tf.get_variable("W_o", shape=(H, H), initializer=xavier_init)
-            bz = tf.get_variable("b_z", shape=(H,), initializer=tf.zeros_initializer())
-            br = tf.get_variable("b_r", shape=(H,), initializer=tf.zeros_initializer())
-            bo = tf.get_variable("b_o", shape=(H,), initializer=tf.zeros_initializer())
+            bz = tf.get_variable("b_z", shape=H, initializer=zero_init)
+            br = tf.get_variable("b_r", shape=H, initializer=zero_init)
+            bo = tf.get_variable("b_o", shape=H, initializer=zero_init)
 
             z_t = tf.sigmoid(tf.matmul(inputs, Uz) + tf.matmul(state, Wz) + bz)
             r_t = tf.sigmoid(tf.matmul(inputs, Ur) + tf.matmul(state, Wr) + br)
-            o_t = tf.tanh(tf.matmul(inputs, Uo) + r_t * tf.matmul(state, Wo) + bo)
+            o_t = tf.tanh(tf.matmul(inputs, Uo) + tf.matmul(r_t * state, Wo) + bo)
 
             new_state = z_t * state + (1 - z_t) * o_t
             ### END YOUR CODE ###

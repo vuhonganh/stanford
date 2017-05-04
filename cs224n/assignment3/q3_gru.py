@@ -39,8 +39,7 @@ class Config:
     max_length = 20 # Length of sequence used.
     batch_size = 100
     n_epochs = 40
-    # lr = 0.2
-    lr = 0.3
+    lr = 0.2
     max_grad_norm = 5.
 
 class SequencePredictor(Model):
@@ -89,9 +88,10 @@ class SequencePredictor(Model):
 
         x = self.inputs_placeholder
         ### YOUR CODE HERE (~2-3 lines)
-        # init_val = tf.zeros((self.config.batch_size, 1))
-        _, final_state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)  # note that arg time_major is False by default (see doc for detail)
-        # _, final_state = tf.nn.dynamic_rnn(cell, x, initial_state=init_val)  # note that arg time_major is False by default (see doc for detail)
+
+        # note that arg time_major is False by default (see doc for detail)
+        _, final_state = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
+        # _, final_state = tf.nn.dynamic_rnn(cell, x, initial_state=init_val)
         preds = tf.sigmoid(final_state)
         ### END YOUR CODE
 
@@ -114,7 +114,7 @@ class SequencePredictor(Model):
         y = self.labels_placeholder
 
         ### YOUR CODE HERE (~1-2 lines)
-        loss = tf.nn.l2_loss(preds - y, name="lossL2")
+        loss = tf.nn.l2_loss(preds - y)
         ### END YOUR CODE
 
         return loss
@@ -143,6 +143,7 @@ class SequencePredictor(Model):
         """
 
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.config.lr)
+
 
         ### YOUR CODE HERE (~6-10 lines)
 
