@@ -7,3 +7,5 @@
 checkpoints*
 processed*
 *.npy
+data/
+download/
