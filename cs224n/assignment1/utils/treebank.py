@@ -204,8 +204,8 @@ class StanfordSentiment:
         self.allSentences()
         i = 0
         for w in xrange(nTokens):
-            w = self._revtokens[i]
-            if w in self._tokenfreq:
+            w = self._revtokens[i]  # _revtokens is a list contains distinct tokens in corpus
+            if w in self._tokenfreq:  # _tokenfreq is a dict token -> nb of times token appears in corpus
                 freq = 1.0 * self._tokenfreq[w]
                 # Reweigh
                 freq = freq ** 0.75

@@ -6,7 +6,6 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import itertools
-
 from utils.treebank import StanfordSentiment
 import utils.glove as glove
 
@@ -26,6 +25,10 @@ def getArguments():
                        help="Use pretrained GloVe vectors.")
     group.add_argument("--yourvectors", dest="yourvectors", action="store_true",
                        help="Use your vectors from q3.")
+    group.add_argument("--random", dest="random", action="store_true",
+                       help="totally random.")
+    group.add_argument("--final", dest="final", action="store_true",
+                       help="use finalEmbed.")
     return parser.parse_args()
 
 
@@ -161,6 +164,10 @@ def main(args):
             axis=1)
     elif args.pretrained:
         wordVectors = glove.loadWordVectors(tokens)
+    elif args.random:
+        wordVectors = np.random.randn(19539, 128)
+    elif args.final:
+        wordVectors = np.load('finalEmbed.npy')
     dimVectors = wordVectors.shape[1]
 
     # Load the train set
